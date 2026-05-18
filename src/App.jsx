@@ -226,6 +226,7 @@ export default function App(){
   const [regForm,setRegForm]=useState({name:"",code:"",teams:[],phone:""});
   const [regDone,setRegDone]=useState(false);
   const [decisions,setDecisions]=useState({});
+  const [newSellerAlert,setNewSellerAlert]=useState(null);
   const [lastPublished,setLastPublished]=useState(null);
   const [adminComments,setAdminComments]=useState({});
   const [buyerPhone,setBuyerPhone]=useState(()=>localStorage.getItem("buyer_phone")||"393920807822");
@@ -278,7 +279,9 @@ export default function App(){
     const ch=supabase.channel("rt")
       .on("postgres_changes",{event:"*",schema:"public",table:"proposals"},loadAll)
       .on("postgres_changes",{event:"*",schema:"public",table:"votes"},loadAll)
-      .on("postgres_changes",{event:"*",schema:"public",table:"sellers"},loadAll)
+      .on("postgres_changes",{event:"INSERT",schema:"public",table:"sellers"},(payload)=>{loadAll();if(pinOk){setNewSellerAlert(payload.new?.name);}  })
+      .on("postgres_changes",{event:"UPDATE",schema:"public",table:"sellers"},loadAll)
+      .on("postgres_changes",{event:"DELETE",schema:"public",table:"sellers"},loadAll)
       .subscribe();
     return()=>supabase.removeChannel(ch);
   },[]);
@@ -649,6 +652,10 @@ export default function App(){
 
             {activeTab==="sellers"&&<div>
               <h2 style={{fontSize:24,fontWeight:300,fontStyle:"italic",margin:"0 0 20px",color:"#2a2a2a"}}>{t.sellersTitle}</h2>
+              {newSellerAlert&&<div style={{background:"#f4fbf7",border:"1px solid #c8e6d3",padding:"12px 16px",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+                <p style={{fontFamily:"'Lato',sans-serif",fontSize:13,color:"#2e7d4f",margin:0}}>🆕 Nuovo venditore registrato: <strong>{newSellerAlert}</strong></p>
+                <button onClick={()=>setNewSellerAlert(null)} style={{background:"none",border:"none",color:"#aaa",cursor:"pointer",fontSize:16,padding:0}}>✕</button>
+              </div>}
               <div style={{background:"#fafafa",border:"1px solid #ebebeb",padding:"14px 16px",marginBottom:24}}>
                 <p style={{fontFamily:"'Lato',sans-serif",fontSize:10,letterSpacing:2,textTransform:"uppercase",color:"#aaa",margin:"0 0 10px"}}>{t.regCodeTitle}</p>
                 <div style={{display:"flex",gap:10,alignItems:"center"}}>
