@@ -174,8 +174,16 @@ const T = {
   }
 };
 
-const DEFAULT_SELLERS = [];
- 
+const DEFAULT_SELLERS = [
+  {name:"Marco R.",isTeamLeader:false,teams:["Lonigo"]},{name:"Giulia T.",isTeamLeader:false,teams:["Cavaion"]},
+  {name:"Luca B.",isTeamLeader:false,teams:["Lonigo"]},{name:"Sara M.",isTeamLeader:false,teams:["Cavaion"]},
+  {name:"Andrea F.",isTeamLeader:false,teams:["Brasile"]},{name:"Elena V.",isTeamLeader:false,teams:["Brasile"]},
+  {name:"Paolo C.",isTeamLeader:false,teams:["Brasile"]},{name:"Matteo G.",isTeamLeader:false,teams:["Lonigo"]},
+  {name:"Chiara N.",isTeamLeader:false,teams:["Cavaion"]},{name:"Roberto L.",isTeamLeader:false,teams:["Lonigo"]},
+  {name:"Francesca D.",isTeamLeader:false,teams:["Cavaion"]},{name:"Cristiano Villardi",isTeamLeader:true,teams:["Cavaion","Lonigo"]},
+  {name:"Valentina P.",isTeamLeader:false,teams:["Lonigo"]},{name:"Marina Grigoli",isTeamLeader:true,teams:["Brasile"]},
+  {name:"Monica Z.",isTeamLeader:false,teams:["Cavaion"]},
+];
 
 const STONE_TYPES=["Marmo","Granito","Quartzite","Travertino","Onice","Pietra calcarea","Basalto","Scisto","Altro","Non identificato / Da definire"];
 const PIN="1234";
@@ -212,10 +220,9 @@ export default function App(){
   const [pinOk,setPinOk]=useState(false);
   const [toast,setToast]=useState(null);
   const [activeTab,setActiveTab]=useState("new");
-  const [sellers,setSellers]=useState(()=>{try{const s=localStorage.getItem("fav_sellers");return s?JSON.parse(s):DEFAULT_SELLERS;}catch{return DEFAULT_SELLERS;}});
+  const [sellers,setSellers]=useState([]);
   const [newSellerName,setNewSellerName]=useState("");
-  const [regCode,setRegCode]=useState(()=>localStorage.getItem(REG_CODE_KEY)||"");useEffect(()=>{supabase.from("settings").select("*").then(({data})=>{const r=data?.find(x=>x.key==="reg_code");if(r)setRegCode(r.value);});},[]);
-  
+  const [regCode,setRegCode]=useState(()=>localStorage.getItem(REG_CODE_KEY)||"");
   const [regForm,setRegForm]=useState({name:"",code:"",teams:[],phone:""});
   const [regDone,setRegDone]=useState(false);
   const [decisions,setDecisions]=useState({});
@@ -223,18 +230,40 @@ export default function App(){
   const [adminComments,setAdminComments]=useState({});
   const [buyerPhone,setBuyerPhone]=useState(()=>localStorage.getItem("buyer_phone")||"393920807822");
 
-  const saveSellers=(u)=>{setSellers(u);try{localStorage.setItem("fav_sellers",JSON.stringify(u));}catch{}};
+  const saveSellers=(u)=>setSellers(u);
+
+  const addSellerToDb=async(seller)=>{
+    await supabase.from("sellers").insert({
+      name:seller.name, is_team_leader:seller.isTeamLeader||false,
+      teams:seller.teams||[], phone:seller.phone||null, lang:seller.lang||"it"
+    });
+  };
+
+  const updateSellerInDb=async(seller)=>{
+    await supabase.from("sellers").update({
+      is_team_leader:seller.isTeamLeader, teams:seller.teams, phone:seller.phone
+    }).eq("name",seller.name);
+  };
+
+  const deleteSellerFromDb=async(name)=>{
+    await supabase.from("sellers").delete().eq("name",name);
+  };
 
   useEffect(()=>{loadAll();},[]);
 
   async function loadAll(){
     setLoading(true);
     try{
-      const [{data:pData},{data:vData}]=await Promise.all([
+      const [{data:pData},{data:vData},{data:sData},{data:selData}]=await Promise.all([
         supabase.from("proposals").select("*").order("created_at",{ascending:false}),
         supabase.from("votes").select("*"),
+        supabase.from("settings").select("*"),
+        supabase.from("sellers").select("*").order("created_at",{ascending:true}),
       ]);
+      const codeRow=sData?.find(r=>r.key==="reg_code");
+      if(codeRow) setRegCode(codeRow.value);
       setProposals(pData||[]);
+      setSellers((selData||[]).map(s=>({name:s.name,isTeamLeader:s.is_team_leader,teams:s.teams||[],phone:s.phone,lang:s.lang})));
       const vMap={};
       (vData||[]).forEach(v=>{
         if(!vMap[v.proposal_id]) vMap[v.proposal_id]={};
@@ -249,6 +278,7 @@ export default function App(){
     const ch=supabase.channel("rt")
       .on("postgres_changes",{event:"*",schema:"public",table:"proposals"},loadAll)
       .on("postgres_changes",{event:"*",schema:"public",table:"votes"},loadAll)
+      .on("postgres_changes",{event:"*",schema:"public",table:"sellers"},loadAll)
       .subscribe();
     return()=>supabase.removeChannel(ch);
   },[]);
@@ -268,10 +298,13 @@ export default function App(){
 
   const handleRegister=async()=>{
     if(!regForm.name.trim()){showToast(t.nameErr,"err");return;}
-    const{data:sd}=await supabase.from("settings").select("*").eq("key","reg_code").single();const validCode=sd?.value||regCode;if(!validCode||regForm.code.trim()!==validCode.trim()){showToast(t.codeErr,"err");return;}
+    const{data:sd}=await supabase.from("settings").select("*").eq("key","reg_code").single();
+    const validCode=sd?.value||regCode;
+    if(!validCode||regForm.code.trim()!==validCode.trim()){showToast(t.codeErr,"err");return;}
     if(regForm.teams.length===0){showToast(t.teamErr,"err");return;}
     if(sellers.find(s=>s.name.toLowerCase()===regForm.name.trim().toLowerCase())){showToast(t.nameExists,"err");return;}
-    saveSellers([...sellers,{name:regForm.name.trim(),isTeamLeader:false,teams:regForm.teams,phone:regForm.phone.replace(/[^0-9]/g,"")||null}]);
+    const newSeller={name:regForm.name.trim(),isTeamLeader:false,teams:regForm.teams,phone:regForm.phone.replace(/[^0-9]/g,"")||null,lang};
+    await addSellerToDb(newSeller);
     localStorage.setItem("fav_seller",regForm.name.trim());
     setSelectedSeller(regForm.name.trim());
     setRegDone(true);showToast(t.regOk);
@@ -619,8 +652,8 @@ export default function App(){
               <div style={{background:"#fafafa",border:"1px solid #ebebeb",padding:"14px 16px",marginBottom:24}}>
                 <p style={{fontFamily:"'Lato',sans-serif",fontSize:10,letterSpacing:2,textTransform:"uppercase",color:"#aaa",margin:"0 0 10px"}}>{t.regCodeTitle}</p>
                 <div style={{display:"flex",gap:10,alignItems:"center"}}>
-                  <input style={{...inp,flex:1,fontWeight:700,letterSpacing:4,fontSize:16}} placeholder="—" value={regCode} onChange={e=>{setRegCode(e.target.value);localStorage.setItem(REG_CODE_KEY,e.target.value);}}/>
-                  <Btn onClick={()=>{const code=Math.random().toString(36).substring(2,8).toUpperCase();setRegCode(code);localStorage.setItem(REG_CODE_KEY,code);showToast(t.newCode+code);}}>{t.generate}</Btn>
+                  <input style={{...inp,flex:1,fontWeight:700,letterSpacing:4,fontSize:16}} placeholder="—" value={regCode} onChange={async e=>{const v=e.target.value;setRegCode(v);localStorage.setItem(REG_CODE_KEY,v);if(v.trim())await supabase.from("settings").upsert({key:"reg_code",value:v},{onConflict:"key"});}}/>
+                  <Btn onClick={async()=>{const code=Math.random().toString(36).substring(2,8).toUpperCase();setRegCode(code);localStorage.setItem(REG_CODE_KEY,code);await supabase.from("settings").upsert({key:"reg_code",value:code},{onConflict:"key"});showToast(t.newCode+code);}}>{t.generate}</Btn>
                 </div>
                 <p style={{fontFamily:"'Lato',sans-serif",fontSize:11,color:"#bbb",margin:"8px 0 0"}}>{t.regCodeNote}</p>
                 {regCode&&<button onClick={()=>{const url=window.location.href.split("?")[0];window.open("https://wa.me/?text="+encodeURIComponent(t.inviteMsg(regCode,url)),"_blank");}}
@@ -630,8 +663,8 @@ export default function App(){
               </div>
               <div style={{display:"flex",gap:10,marginBottom:24}}>
                 <input style={{...inp,flex:1}} placeholder={t.addSellerPh} value={newSellerName} onChange={e=>setNewSellerName(e.target.value)}
-                  onKeyDown={e=>{if(e.key==="Enter"&&newSellerName.trim()){if(sellers.find(s=>s.name.toLowerCase()===newSellerName.trim().toLowerCase())){showToast(t.addedErr,"err");return;}saveSellers([...sellers,{name:newSellerName.trim(),isTeamLeader:false,teams:[]}]);setNewSellerName("");showToast(t.addedOk);}}}/>
-                <Btn onClick={()=>{if(!newSellerName.trim())return;if(sellers.find(s=>s.name.toLowerCase()===newSellerName.trim().toLowerCase())){showToast(t.addedErr,"err");return;}saveSellers([...sellers,{name:newSellerName.trim(),isTeamLeader:false,teams:[]}]);setNewSellerName("");showToast(t.addedOk);}}>{t.add}</Btn>
+                  onKeyDown={async e=>{if(e.key==="Enter"&&newSellerName.trim()){if(sellers.find(s=>s.name.toLowerCase()===newSellerName.trim().toLowerCase())){showToast(t.addedErr,"err");return;}await addSellerToDb({name:newSellerName.trim(),isTeamLeader:false,teams:[],phone:null,lang:"it"});setNewSellerName("");showToast(t.addedOk);}}}/>
+                <Btn onClick={async()=>{if(!newSellerName.trim())return;if(sellers.find(s=>s.name.toLowerCase()===newSellerName.trim().toLowerCase())){showToast(t.addedErr,"err");return;}await addSellerToDb({name:newSellerName.trim(),isTeamLeader:false,teams:[],phone:null,lang:"it"});setNewSellerName("");showToast(t.addedOk);}}>{t.add}</Btn>
               </div>
               {sellers.map((seller,idx)=>(
                 <div key={idx} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",border:"1px solid #ebebeb",marginBottom:6,background:"#fff"}}>
@@ -640,8 +673,8 @@ export default function App(){
                     {seller.isTeamLeader&&<span style={{fontFamily:"'Lato',sans-serif",fontSize:9,letterSpacing:1.5,textTransform:"uppercase",color:"#fff",background:"#454545",padding:"2px 7px",marginLeft:8}}>{t.teamLeader}</span>}
                     {seller.teams?.length>0&&<p style={{fontFamily:"'Lato',sans-serif",fontSize:11,color:"#bbb",margin:"2px 0 0"}}>{seller.teams.join(" · ")}{seller.phone?` · 📱 ${seller.phone}`:" · 📵 no WhatsApp"}</p>}
                   </div>
-                  <button onClick={()=>{const u=sellers.map((s,i)=>i===idx?{...s,isTeamLeader:!s.isTeamLeader}:s);saveSellers(u);}} style={{fontFamily:"'Lato',sans-serif",fontSize:10,letterSpacing:1.5,textTransform:"uppercase",color:seller.isTeamLeader?"#9e2a2a":"#454545",background:"none",border:`1px solid ${seller.isTeamLeader?"#f5c6c6":"#e0e0e0"}`,padding:"5px 10px",cursor:"pointer"}}>{seller.isTeamLeader?t.removeTL:t.makeTL}</button>
-                  <button onClick={()=>{saveSellers(sellers.filter((_,i)=>i!==idx));showToast(t.removeOk);}} style={{fontFamily:"'Lato',sans-serif",fontSize:10,letterSpacing:1.5,textTransform:"uppercase",color:"#ccc",background:"none",border:"none",cursor:"pointer",padding:0}}>{t.deleteBtn}</button>
+                  <button onClick={async()=>{const updated={...seller,isTeamLeader:!seller.isTeamLeader};await updateSellerInDb(updated);}} style={{fontFamily:"'Lato',sans-serif",fontSize:10,letterSpacing:1.5,textTransform:"uppercase",color:seller.isTeamLeader?"#9e2a2a":"#454545",background:"none",border:`1px solid ${seller.isTeamLeader?"#f5c6c6":"#e0e0e0"}`,padding:"5px 10px",cursor:"pointer"}}>{seller.isTeamLeader?t.removeTL:t.makeTL}</button>
+                  <button onClick={async()=>{await deleteSellerFromDb(seller.name);showToast(t.removeOk);}} style={{fontFamily:"'Lato',sans-serif",fontSize:10,letterSpacing:1.5,textTransform:"uppercase",color:"#ccc",background:"none",border:"none",cursor:"pointer",padding:0}}>{t.deleteBtn}</button>
                 </div>
               ))}
               <p style={{fontFamily:"'Lato',sans-serif",fontSize:11,color:"#bbb",marginTop:16}}>{sellers.length} {t.tabSellers} · {sellers.filter(s=>s.isTeamLeader).length} {t.teamLeader}</p>
