@@ -174,7 +174,7 @@ const T = {
   }
 };
 
-const DEFAULT_SELLERS = [
+const DEFAULT_SELLERS = [];
   {name:"Marco R.",isTeamLeader:false,teams:["Lonigo"]},{name:"Giulia T.",isTeamLeader:false,teams:["Cavaion"]},
   {name:"Luca B.",isTeamLeader:false,teams:["Lonigo"]},{name:"Sara M.",isTeamLeader:false,teams:["Cavaion"]},
   {name:"Andrea F.",isTeamLeader:false,teams:["Brasile"]},{name:"Elena V.",isTeamLeader:false,teams:["Brasile"]},
