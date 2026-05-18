@@ -274,9 +274,9 @@ export default function App(){
     return{yes,no,total,pct:total?Math.round((yes/total)*100):0,maxVotes:getSellers(proposal).length};
   };
 
-  const handleRegister=()=>{
+  const handleRegister=async()=>{
     if(!regForm.name.trim()){showToast(t.nameErr,"err");return;}
-    if(!regCode||regForm.code.trim()!==regCode.trim()){showToast(t.codeErr,"err");return;}
+    const{data:sd}=await supabase.from("settings").select("*").eq("key","reg_code").single();const validCode=sd?.value||regCode;if(!validCode||regForm.code.trim()!==validCode.trim()){showToast(t.codeErr,"err");return;}
     if(regForm.teams.length===0){showToast(t.teamErr,"err");return;}
     if(sellers.find(s=>s.name.toLowerCase()===regForm.name.trim().toLowerCase())){showToast(t.nameExists,"err");return;}
     saveSellers([...sellers,{name:regForm.name.trim(),isTeamLeader:false,teams:regForm.teams,phone:regForm.phone.replace(/[^0-9]/g,"")||null}]);
