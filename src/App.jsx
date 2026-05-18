@@ -222,7 +222,8 @@ export default function App(){
   const [activeTab,setActiveTab]=useState("new");
   const [sellers,setSellers]=useState(()=>{try{const s=localStorage.getItem("fav_sellers");return s?JSON.parse(s):DEFAULT_SELLERS;}catch{return DEFAULT_SELLERS;}});
   const [newSellerName,setNewSellerName]=useState("");
-  const [regCode,setRegCode]=useState(()=>localStorage.getItem(REG_CODE_KEY)||"");
+  const [regCode,setRegCode]=useState(()=>localStorage.getItem(REG_CODE_KEY)||"");useEffect(()=>{supabase.from("settings").select("*").then(({data})=>{const r=data?.find(x=>x.key==="reg_code");if(r)setRegCode(r.value);});},[]);
+  
   const [regForm,setRegForm]=useState({name:"",code:"",teams:[],phone:""});
   const [regDone,setRegDone]=useState(false);
   const [decisions,setDecisions]=useState({});
