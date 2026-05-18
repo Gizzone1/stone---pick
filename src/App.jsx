@@ -175,15 +175,7 @@ const T = {
 };
 
 const DEFAULT_SELLERS = [];
-  {name:"Marco R.",isTeamLeader:false,teams:["Lonigo"]},{name:"Giulia T.",isTeamLeader:false,teams:["Cavaion"]},
-  {name:"Luca B.",isTeamLeader:false,teams:["Lonigo"]},{name:"Sara M.",isTeamLeader:false,teams:["Cavaion"]},
-  {name:"Andrea F.",isTeamLeader:false,teams:["Brasile"]},{name:"Elena V.",isTeamLeader:false,teams:["Brasile"]},
-  {name:"Paolo C.",isTeamLeader:false,teams:["Brasile"]},{name:"Matteo G.",isTeamLeader:false,teams:["Lonigo"]},
-  {name:"Chiara N.",isTeamLeader:false,teams:["Cavaion"]},{name:"Roberto L.",isTeamLeader:false,teams:["Lonigo"]},
-  {name:"Francesca D.",isTeamLeader:false,teams:["Cavaion"]},{name:"Cristiano Villardi",isTeamLeader:true,teams:["Cavaion","Lonigo"]},
-  {name:"Valentina P.",isTeamLeader:false,teams:["Lonigo"]},{name:"Marina Grigoli",isTeamLeader:true,teams:["Brasile"]},
-  {name:"Monica Z.",isTeamLeader:false,teams:["Cavaion"]},
-];
+ 
 
 const STONE_TYPES=["Marmo","Granito","Quartzite","Travertino","Onice","Pietra calcarea","Basalto","Scisto","Altro","Non identificato / Da definire"];
 const PIN="1234";
