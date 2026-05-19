@@ -227,6 +227,7 @@ export default function App(){
   const [regDone,setRegDone]=useState(false);
   const [decisions,setDecisions]=useState({});
   const [newSellerAlert,setNewSellerAlert]=useState(null);
+  const [editingSeller,setEditingSeller]=useState(null); // { idx, name, phone, teams }
   const [lastPublished,setLastPublished]=useState(null);
   const [adminComments,setAdminComments]=useState({});
   const [buyerPhone,setBuyerPhone]=useState(()=>localStorage.getItem("buyer_phone")||"393920807822");
@@ -674,14 +675,40 @@ export default function App(){
                 <Btn onClick={async()=>{if(!newSellerName.trim())return;if(sellers.find(s=>s.name.toLowerCase()===newSellerName.trim().toLowerCase())){showToast(t.addedErr,"err");return;}await addSellerToDb({name:newSellerName.trim(),isTeamLeader:false,teams:[],phone:null,lang:"it"});setNewSellerName("");showToast(t.addedOk);}}>{t.add}</Btn>
               </div>
               {sellers.map((seller,idx)=>(
-                <div key={idx} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",border:"1px solid #ebebeb",marginBottom:6,background:"#fff"}}>
-                  <div style={{flex:1}}>
-                    <span style={{fontSize:15,fontStyle:"italic",color:"#2a2a2a"}}>{seller.name}</span>
-                    {seller.isTeamLeader&&<span style={{fontFamily:"'Lato',sans-serif",fontSize:9,letterSpacing:1.5,textTransform:"uppercase",color:"#fff",background:"#454545",padding:"2px 7px",marginLeft:8}}>{t.teamLeader}</span>}
-                    {seller.teams?.length>0&&<p style={{fontFamily:"'Lato',sans-serif",fontSize:11,color:"#bbb",margin:"2px 0 0"}}>{seller.teams.join(" · ")}{seller.phone?` · 📱 ${seller.phone}`:" · 📵 no WhatsApp"}</p>}
+                <div key={idx} style={{border:"1px solid #ebebeb",marginBottom:6,background:"#fff"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px"}}>
+                    <div style={{flex:1}}>
+                      <span style={{fontSize:15,fontStyle:"italic",color:"#2a2a2a"}}>{seller.name}</span>
+                      {seller.isTeamLeader&&<span style={{fontFamily:"'Lato',sans-serif",fontSize:9,letterSpacing:1.5,textTransform:"uppercase",color:"#fff",background:"#454545",padding:"2px 7px",marginLeft:8}}>{t.teamLeader}</span>}
+                      {seller.teams?.length>0&&<p style={{fontFamily:"'Lato',sans-serif",fontSize:11,color:"#bbb",margin:"2px 0 0"}}>{seller.teams.join(" · ")}{seller.phone?` · 📱 ${seller.phone}`:" · 📵 no WhatsApp"}</p>}
+                    </div>
+                    <button onClick={async()=>{const updated={...seller,isTeamLeader:!seller.isTeamLeader};saveSellers(sellers.map((s,i)=>i===idx?updated:s));await updateSellerInDb(updated);}} style={{fontFamily:"'Lato',sans-serif",fontSize:10,letterSpacing:1.5,textTransform:"uppercase",color:seller.isTeamLeader?"#9e2a2a":"#454545",background:"none",border:`1px solid ${seller.isTeamLeader?"#f5c6c6":"#e0e0e0"}`,padding:"5px 10px",cursor:"pointer"}}>{seller.isTeamLeader?t.removeTL:t.makeTL}</button>
+                    <button onClick={()=>setEditingSeller(editingSeller?.idx===idx?null:{idx,name:seller.name,phone:seller.phone||"",teams:seller.teams||[]})} style={{fontFamily:"'Lato',sans-serif",fontSize:10,letterSpacing:1.5,textTransform:"uppercase",color:"#454545",background:"none",border:"1px solid #e0e0e0",padding:"5px 10px",cursor:"pointer"}}>Modifica</button>
+                    <button onClick={async()=>{await deleteSellerFromDb(seller.name);showToast(t.removeOk);}} style={{fontFamily:"'Lato',sans-serif",fontSize:10,letterSpacing:1.5,textTransform:"uppercase",color:"#ccc",background:"none",border:"none",cursor:"pointer",padding:0}}>{t.deleteBtn}</button>
                   </div>
-                  <button onClick={async()=>{const updated={...seller,isTeamLeader:!seller.isTeamLeader};saveSellers(sellers.map((s,i)=>i===idx?updated:s));await updateSellerInDb(updated);}} style={{fontFamily:"'Lato',sans-serif",fontSize:10,letterSpacing:1.5,textTransform:"uppercase",color:seller.isTeamLeader?"#9e2a2a":"#454545",background:"none",border:`1px solid ${seller.isTeamLeader?"#f5c6c6":"#e0e0e0"}`,padding:"5px 10px",cursor:"pointer"}}>{seller.isTeamLeader?t.removeTL:t.makeTL}</button>
-                  <button onClick={async()=>{await deleteSellerFromDb(seller.name);showToast(t.removeOk);}} style={{fontFamily:"'Lato',sans-serif",fontSize:10,letterSpacing:1.5,textTransform:"uppercase",color:"#ccc",background:"none",border:"none",cursor:"pointer",padding:0}}>{t.deleteBtn}</button>
+                  {editingSeller?.idx===idx&&<div style={{padding:"12px 14px",borderTop:"1px solid #f0f0f0",background:"#fafafa"}}>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                      <div>
+                        <Lbl>📱 Numero WhatsApp</Lbl>
+                        <input style={inp} placeholder="es. 393331234567" value={editingSeller.phone} onChange={e=>setEditingSeller(s=>({...s,phone:e.target.value}))} inputMode="tel"/>
+                      </div>
+                      <div>
+                        <Lbl>Team</Lbl>
+                        <div style={{display:"flex",gap:6,marginTop:7}}>
+                          {TEAMS.map(tm=>(
+                            <button key={tm} onClick={()=>setEditingSeller(s=>({...s,teams:s.teams.includes(tm)?s.teams.filter(x=>x!==tm):[...s.teams,tm]}))}
+                              style={{flex:1,padding:"8px 4px",border:`1px solid ${editingSeller.teams.includes(tm)?"#454545":"#e8e8e8"}`,background:editingSeller.teams.includes(tm)?"#454545":"#fff",color:editingSeller.teams.includes(tm)?"#fff":"#999",fontFamily:"'Lato',sans-serif",fontSize:10,letterSpacing:1,textTransform:"uppercase",cursor:"pointer"}}>
+                              {tm}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{display:"flex",gap:8"}}>
+                      <Btn onClick={async()=>{const updated={...seller,phone:editingSeller.phone.replace(/[^0-9]/g,"")||null,teams:editingSeller.teams};saveSellers(sellers.map((s,i)=>i===idx?updated:s));await updateSellerInDb(updated);setEditingSeller(null);showToast("Modifiche salvate.");}} >Salva</Btn>
+                      <Btn outline onClick={()=>setEditingSeller(null)}>Annulla</Btn>
+                    </div>
+                  </div>}
                 </div>
               ))}
               <p style={{fontFamily:"'Lato',sans-serif",fontSize:11,color:"#bbb",marginTop:16}}>{sellers.length} {t.tabSellers} · {sellers.filter(s=>s.isTeamLeader).length} {t.teamLeader}</p>
