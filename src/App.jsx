@@ -704,7 +704,7 @@ export default function App(){
                         </div>
                       </div>
                     </div>
-                    <div style={{display:"flex",gap:8"}}>
+                    <div style={{display:"flex",gap:8}}>
                       <Btn onClick={async()=>{const updated={...seller,phone:editingSeller.phone.replace(/[^0-9]/g,"")||null,teams:editingSeller.teams};saveSellers(sellers.map((s,i)=>i===idx?updated:s));await updateSellerInDb(updated);setEditingSeller(null);showToast("Modifiche salvate.");}} >Salva</Btn>
                       <Btn outline onClick={()=>setEditingSeller(null)}>Annulla</Btn>
                     </div>
