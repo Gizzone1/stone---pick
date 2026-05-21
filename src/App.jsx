@@ -185,7 +185,7 @@ const DEFAULT_SELLERS = [
   {name:"Monica Z.",isTeamLeader:false,teams:["Cavaion"]},
 ];
 
-const STONE_TYPES=["Marmo","Granito","Quartzite","Travertino","Onice","Pietra calcarea","Basalto","Scisto","Altro","Non identificato / Da definire"];
+const STONE_TYPES=["Marmo","Granito","Quartzite","Travertino","Onice","Pietra calcarea","Basalto","Scisto","Dolomite","Altro","Non identificato / Da definire"];
 const PIN="1234";
 const TEAMS=["Cavaion","Lonigo","Brasile"];
 const REG_CODE_KEY="fav_reg_code";
